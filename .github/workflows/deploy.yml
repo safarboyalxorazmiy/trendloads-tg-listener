@@ -13,7 +13,7 @@ jobs:
         with:
           host: 185.215.166.184
           username: root
-          password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
 
