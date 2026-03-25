@@ -1,0 +1,61 @@
+telegram:
+  session_name: "loadboard_listener"
+  # Reconnect settings
+  max_reconnect_attempts: 10
+  reconnect_base_delay: 1.0
+  reconnect_max_delay: 300.0
+  flood_wait_threshold: 60
+
+filters:
+  # Group IDs to monitor (empty = monitor all joined groups)
+  whitelist_group_ids: []
+  # Group IDs to ignore
+  blacklist_group_ids: []
+  # Skip messages from bots
+  skip_bots: true
+  # Minimum message length
+  min_length: 5
+  # Skip messages with only media (no text)
+  skip_media_only: true
+  # Keyword patterns (regex) - message must match at least one
+  keyword_patterns:
+    # Equipment types
+    - "\\b(flatbed|reefer|dry\\s*van|stepdeck|step\\s*deck|hotshot|power\\s*only|box\\s*truck|sprinter|conestoga|lowboy|rgn|van|trailer|container)\\b"
+    # Driver / license
+    - "\\b(solo|team|cdl|hazmat|twic|tanker|driver)\\b"
+    # Dollar amounts
+    - "\\$\\s*\\d{2,}"
+    # Dates (3/26, 03/26)
+    - "\\b\\d{1,2}/\\d{1,2}\\b"
+    # Logistics keywords
+    - "\\b(pick\\s*up|deliver|load|haul|ship|freight|dispatch|booking|available|deadhead|dh|miles|rate|payout|per\\s*mile|rpm)\\b"
+    # Route keywords
+    - "\\b(otr|local|regional|dedicated)\\b"
+    # State-to-state routes (TX-CA, ATL→DAL, etc.)
+    - "[A-Z]{2,4}\\s*[-~>→]+\\s*[A-Z]{2,4}"
+    # Two-letter state codes with arrow/dash
+    - "\\b[A-Z]{2}\\s*to\\s*[A-Z]{2}\\b"
+    # City, STATE patterns
+    - "[A-Za-z]+,\\s*[A-Z]{2}"
+    # ASAP / ready / urgent
+    - "\\b(asap|ready|urgent|hot|must go)\\b"
+
+extraction:
+  model: "gpt-4o-mini"
+  temperature: 0.0
+  max_tokens: 1024
+  # Cache TTL in seconds (24 hours)
+  cache_ttl: 86400
+  # Maximum retries for OpenAI API
+  max_retries: 3
+
+backend:
+  # POST endpoint for extracted loads
+  endpoint: "/api/telegram-loads"
+  # Retry settings
+  max_retries: 3
+  retry_base_delay: 1.0
+  retry_max_delay: 30.0
+  # Batch settings
+  batch_size: 10
+  flush_interval: 30

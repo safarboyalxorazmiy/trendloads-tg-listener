@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  telegram-listener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-listener
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml:ro
+      # Telethon session file persisted across restarts
+      - ./sessions:/app/sessions
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+      - DB_PATH=/app/data/buffer.db
+      - CACHE_DB_PATH=/app/data/cache.db

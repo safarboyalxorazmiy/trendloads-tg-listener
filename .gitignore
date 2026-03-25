@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+*.session
+*.session.telethon.bak
+*.session-journal
+data/
+logs/
+.idea/
+.vscode/
+.DS_Store
