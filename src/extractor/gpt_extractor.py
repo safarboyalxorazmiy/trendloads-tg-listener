@@ -192,6 +192,8 @@ class GPTExtractor:
         # Pre-process city codes for extra context
         annotated = _preprocess_city_codes(text)
 
+        # Sanitize: remove null bytes and surrogates that break JSON serialization
+        annotated = annotated.replace('\x00', '').encode('utf-8', errors='replace').decode('utf-8')
         user_content = f"Parse this load message:\n\n{annotated}"
         if chat_context:
             user_content += f"\n\nChat context (recent messages for reference):\n{chat_context}"
