@@ -1,0 +1,77 @@
+name: Deploy Telegram Listener
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 185.215.166.184
+          username: root
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            set -e
+
+            APP_DIR=/opt/trendloads-tg-listener
+
+            # Clone or pull latest
+            if [ ! -d "$APP_DIR" ]; then
+              git clone https://github.com/safarboyalxorazmiy/trendloads-tg-listener.git $APP_DIR
+            else
+              cd $APP_DIR
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
+            cd $APP_DIR
+
+            # Create .env if not exists
+            if [ ! -f .env ]; then
+              echo "⚠️  .env not found — copy .env.example and fill in secrets"
+              cp .env.example .env
+            fi
+
+            # Create venv + install deps
+            python3 -m venv venv 2>/dev/null || true
+            source venv/bin/activate
+            pip install --quiet --no-cache-dir -r requirements.txt
+
+            # Create data/logs dirs
+            mkdir -p data logs
+
+            # Restart the service
+            if systemctl is-active --quiet tg-listener; then
+              systemctl restart tg-listener
+              echo "✅ tg-listener service restarted"
+            else
+              echo "⚠️  tg-listener service not found — creating it"
+              cat > /etc/systemd/system/tg-listener.service << 'UNIT'
+            [Unit]
+            Description=Trendloads Telegram Listener
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=root
+            WorkingDirectory=/opt/trendloads-tg-listener
+            EnvironmentFile=/opt/trendloads-tg-listener/.env
+            ExecStart=/opt/trendloads-tg-listener/venv/bin/python -m src.main
+            Restart=always
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+            UNIT
+              systemctl daemon-reload
+              systemctl enable tg-listener
+              systemctl start tg-listener
+              echo "✅ tg-listener service created and started"
+            fi
+
+            # Show status
+            systemctl status tg-listener --no-pager || true
