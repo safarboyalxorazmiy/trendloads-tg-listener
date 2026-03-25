@@ -216,8 +216,10 @@ class GPTExtractor:
         Returns ExtractedLoad, a list of ExtractedLoad (for multi-load messages),
         or None if extraction fails.
         """
-        # Use Z suffix (not +00:00) for Jackson Instant compatibility
+        # Normalize to UTC and use Z suffix for Jackson Instant compatibility
         ts_dt = message_timestamp or datetime.now(timezone.utc)
+        if ts_dt.tzinfo is not None:
+            ts_dt = ts_dt.astimezone(timezone.utc)
         ts_iso = ts_dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         def _enrich(load: ExtractedLoad) -> ExtractedLoad:
@@ -329,6 +331,8 @@ class GPTExtractor:
         import base64
 
         ts_dt = message_timestamp or datetime.now(timezone.utc)
+        if ts_dt.tzinfo is not None:
+            ts_dt = ts_dt.astimezone(timezone.utc)
         ts_iso = ts_dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         # Use gpt-4o for vision (gpt-4o-mini doesn't support images well)

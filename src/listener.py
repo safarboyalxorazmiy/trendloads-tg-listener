@@ -272,8 +272,12 @@ class LoadListener:
             chat_id = message.chat.id if message.chat else 0
             message_id = message.id or 0
             message_timestamp = message.date
-            if message_timestamp and message_timestamp.tzinfo is None:
-                message_timestamp = message_timestamp.replace(tzinfo=timezone.utc)
+            if message_timestamp:
+                # Pyrogram may return local or UTC — always normalize to UTC
+                if message_timestamp.tzinfo is None:
+                    message_timestamp = message_timestamp.replace(tzinfo=timezone.utc)
+                else:
+                    message_timestamp = message_timestamp.astimezone(timezone.utc)
         except Exception:
             pass
 
