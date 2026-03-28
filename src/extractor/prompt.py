@@ -27,11 +27,15 @@ power_only, box_truck, sprinter, conestoga, lowboy, rgn, tanker, other, or null
 based on the origin-destination lane, equipment type, estimated distance, current US \
 trucking market rates, AND the real-time weather conditions provided below the message. \
 ALWAYS predict the AVERAGE competitive market rate, NEVER the lowest. \
-Factor in: lane demand, weather severity (snow/storms/freezing increase rates \
-due to danger and reduced carrier availability), seasonal trends, \
-and regional supply-demand. Return as number. NEVER return null — always predict.
+Use these AVERAGE rate ranges: dry van $2.50-3.50/mi, reefer $3.00-4.00/mi, \
+flatbed $3.00-4.50/mi, power only $2.30-3.20/mi, hotshot $2.80-3.50/mi. \
+Adjust UP for: bad weather, high-demand lanes, short haul, holiday season, \
+cross-country. Adjust DOWN slightly for: very long haul (>2000mi), backhaul lanes. \
+NEVER predict below $2.00/mi for any equipment type. \
+Return as number. NEVER return null — always predict.
   estimatedRatePerMile – predict the per-mile rate using the same market knowledge \
-and weather conditions. ALWAYS return a number (e.g. 2.85). NEVER return null.
+and weather conditions. ALWAYS return a number (e.g. 2.85). NEVER return null. \
+NEVER predict below $2.00/mi.
 
 RULES:
 1. If a field is not present in the message, set rate/ratePerMile to null. \
@@ -112,6 +116,34 @@ FEW_SHOT_EXAMPLES: list[tuple[str, str]] = [
         '"readyStatus":"covered","contact":null,'
         '"confidence":0.88,"rawEquipment":"reefer","notes":"Load has been covered",'
         '"estimatedRate":2800,"estimatedRatePerMile":2.95}',
+    ),
+    # ── Example 6: Power only with weather context ──────────────────────
+    (
+        "Columbus OH -> Bloomington CA PO team ASAP\n\n"
+        "REAL-TIME WEATHER CONDITIONS (use these to adjust your rate prediction):\n"
+        "  OH: 28°F, wind 22mph, precip 0.10in, snow 1.50in (snow)\n"
+        "  CA: 72°F, wind 5mph, precip 0.00in, snow 0.00in (clear)",
+        '{"origin":{"city":"Columbus","state":"OH","zip":null},'
+        '"destination":{"city":"Bloomington","state":"CA","zip":null},'
+        '"equipmentType":"power_only","driverType":"team","rate":null,'
+        '"ratePerMile":null,"stops":1,"pickupTime":"ASAP",'
+        '"readyStatus":"posted","contact":null,'
+        '"confidence":0.92,"rawEquipment":"PO","notes":null,'
+        '"estimatedRate":7520,"estimatedRatePerMile":3.00}',
+    ),
+    # ── Example 7: Dry van no rate, clear weather ───────────────────────
+    (
+        "IE to ATL 53DV solo\n\n"
+        "REAL-TIME WEATHER CONDITIONS (use these to adjust your rate prediction):\n"
+        "  CA: 85°F, wind 8mph, precip 0.00in, snow 0.00in (clear)\n"
+        "  GA: 78°F, wind 12mph, precip 0.00in, snow 0.00in (clear)",
+        '{"origin":{"city":"Inland Empire","state":"CA","zip":null},'
+        '"destination":{"city":"Atlanta","state":"GA","zip":null},'
+        '"equipmentType":"dry_van","driverType":"solo","rate":null,'
+        '"ratePerMile":null,"stops":1,"pickupTime":null,'
+        '"readyStatus":"posted","contact":null,'
+        '"confidence":0.88,"rawEquipment":"53DV","notes":null,'
+        '"estimatedRate":6380,"estimatedRatePerMile":2.75}',
     ),
 ]
 
