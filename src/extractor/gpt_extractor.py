@@ -47,6 +47,10 @@ class ExtractedLoad:
     contact: Optional[str] = None  # plain string — @handle, phone, or name
     confidence: float = 0.0
 
+    # --- GPT rate predictions (when rate not in message) ---
+    estimatedRate: Optional[float] = None  # GPT-predicted total payout
+    estimatedRatePerMile: Optional[float] = None  # GPT-predicted $/mi
+
     # --- Distance & payout estimation (set by listener post-processing) ---
     estimatedDistance: Optional[float] = None  # miles
     distancePredicted: bool = False  # True = AI-estimated, False = from message
@@ -136,6 +140,8 @@ def _parse_response(raw: dict, text: str) -> ExtractedLoad:
         readyStatus=raw.get("readyStatus"),
         contact=contact_str,
         confidence=float(raw.get("confidence", 0.0)),
+        estimatedRate=_safe_float(raw.get("estimatedRate")),
+        estimatedRatePerMile=_safe_float(raw.get("estimatedRatePerMile")),
     )
 
 

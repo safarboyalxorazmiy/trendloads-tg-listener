@@ -23,9 +23,19 @@ power_only, box_truck, sprinter, conestoga, lowboy, rgn, tanker, other, or null
   confidence      – float 0.0-1.0 indicating your confidence the parse is correct
   rawEquipment    – the original equipment text from the message, or null
   notes           – any extra info that doesn't fit above, or null
+  estimatedRate   – if rate is null (not in the message), predict the total payout \
+based on the origin-destination lane, equipment type, distance, and current US \
+trucking market rates. Use your knowledge of typical freight rates: \
+dry van ~$2.00-3.50/mi, reefer ~$2.50-4.00/mi, flatbed ~$2.50-4.50/mi, \
+power only ~$1.50-2.50/mi. Factor in lane demand (e.g. LA→NY pays more than \
+rural→rural). Return as number or null if you can't estimate.
+  estimatedRatePerMile – if ratePerMile is null, predict the per-mile rate \
+using the same market knowledge. Return as number (e.g. 2.85) or null.
 
 RULES:
-1. If a field is not present, set it to null. DO NOT guess.
+1. If a field is not present in the message, set rate/ratePerMile to null. \
+But ALWAYS try to fill estimatedRate and estimatedRatePerMile with your best \
+market-rate prediction when the actual rate is missing.
 2. City codes: messages often use airport codes or slang (LAX = Los Angeles CA, \
 ATL = Atlanta GA, DFW = Dallas-Fort Worth TX, SOCAL = Southern California CA, \
 DMV = DC/Maryland/Virginia, TRISTATE = NY/NJ/CT, IE = Inland Empire CA, etc.). \
@@ -54,7 +64,8 @@ FEW_SHOT_EXAMPLES: list[tuple[str, str]] = [
         '"equipmentType":"reefer","driverType":"solo","rate":3200,'
         '"ratePerMile":null,"stops":1,"pickupTime":"Monday pickup",'
         '"readyStatus":"posted","contact":{"name":"Mike","phone":"214-555-0199","telegram":null},'
-        '"confidence":0.95,"rawEquipment":"53 reefer","notes":null}',
+        '"confidence":0.95,"rawEquipment":"53 reefer","notes":null,'
+        '"estimatedRate":null,"estimatedRatePerMile":null}',
     ),
     # ── Example 2: Per-mile rate, team, Telegram contact ─────────────────
     (
@@ -64,7 +75,8 @@ FEW_SHOT_EXAMPLES: list[tuple[str, str]] = [
         '"equipmentType":"dry_van","driverType":"team","rate":null,'
         '"ratePerMile":2.45,"stops":2,"pickupTime":null,'
         '"readyStatus":"posted","contact":{"name":null,"phone":null,"telegram":"@freight_mike"},'
-        '"confidence":0.92,"rawEquipment":"DV","notes":null}',
+        '"confidence":0.92,"rawEquipment":"DV","notes":null,'
+        '"estimatedRate":null,"estimatedRatePerMile":null}',
     ),
     # ── Example 3: Minimal info with slang ───────────────────────────────
     (
@@ -74,7 +86,8 @@ FEW_SHOT_EXAMPLES: list[tuple[str, str]] = [
         '"equipmentType":"flatbed","driverType":null,"rate":5500,'
         '"ratePerMile":null,"stops":null,"pickupTime":"ASAP",'
         '"readyStatus":"posted","contact":null,'
-        '"confidence":0.85,"rawEquipment":"FB","notes":"all in rate"}',
+        '"confidence":0.85,"rawEquipment":"FB","notes":"all in rate",'
+        '"estimatedRate":null,"estimatedRatePerMile":null}',
     ),
     # ── Example 4: Hotshot with zip codes ────────────────────────────────
     (
@@ -84,7 +97,8 @@ FEW_SHOT_EXAMPLES: list[tuple[str, str]] = [
         '"equipmentType":"hotshot","driverType":null,"rate":1800,'
         '"ratePerMile":null,"stops":1,"pickupTime":"today",'
         '"readyStatus":"posted","contact":{"name":null,"phone":"469-555-0142","telegram":null},'
-        '"confidence":0.90,"rawEquipment":"Hotshot","notes":null}',
+        '"confidence":0.90,"rawEquipment":"Hotshot","notes":null,'
+        '"estimatedRate":null,"estimatedRatePerMile":null}',
     ),
     # ── Example 5: Covered load update ───────────────────────────────────
     (
@@ -94,7 +108,8 @@ FEW_SHOT_EXAMPLES: list[tuple[str, str]] = [
         '"equipmentType":"reefer","driverType":null,"rate":null,'
         '"ratePerMile":null,"stops":null,"pickupTime":null,'
         '"readyStatus":"covered","contact":null,'
-        '"confidence":0.88,"rawEquipment":"reefer","notes":"Load has been covered"}',
+        '"confidence":0.88,"rawEquipment":"reefer","notes":"Load has been covered",'
+        '"estimatedRate":2800,"estimatedRatePerMile":2.95}',
     ),
 ]
 
