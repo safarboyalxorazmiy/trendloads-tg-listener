@@ -147,7 +147,7 @@ class LoadListener:
         msg_list = state.messages
 
         first = msg_list[0]
-        chat_id, message_id, chat_title, sender_name, message_timestamp = self._extract_metadata(first)
+        chat_id, message_id, chat_title, sender_name, sender_username, message_timestamp = self._extract_metadata(first)
 
         logger.info(
             f"Processing album (grouped_id={grouped_id}): {len(msg_list)} photo(s), "
@@ -185,10 +185,15 @@ class LoadListener:
             logger.debug(f"No loads extracted from album {grouped_id}")
             return
 
+        # Apply contact: caption contact first, then sender's @username as fallback
         if contact:
             for load in all_loads:
                 if not load.contact:
                     load.contact = contact
+        if sender_username:
+            for load in all_loads:
+                if not load.contact:
+                    load.contact = sender_username
         if caption:
             for load in all_loads:
                 if load.rawText:
@@ -212,7 +217,7 @@ class LoadListener:
     async def _process_single_message(self, message: Message) -> None:
         """Process a single text message or single (non-album) photo."""
         text = message.text or message.caption or ""
-        chat_id, message_id, chat_title, sender_name, message_timestamp = self._extract_metadata(message)
+        chat_id, message_id, chat_title, sender_name, sender_username, message_timestamp = self._extract_metadata(message)
 
         has_photo = message.photo is not None
         logger.info(
@@ -276,6 +281,12 @@ class LoadListener:
             logger.debug(f"All loads below confidence threshold for message {message_id}")
             return
 
+        # Fallback contact: use sender's @username if GPT didn't find a contact
+        if sender_username:
+            for load in valid_loads:
+                if not load.contact:
+                    load.contact = sender_username
+
         logger.info(
             f"Extracted {len(valid_loads)} load(s) from message {message_id} "
             f"(confidence: {[round(l.confidence, 2) for l in valid_loads]})"
@@ -287,14 +298,15 @@ class LoadListener:
 
     def _extract_metadata(
         self, message: Message
-    ) -> Tuple[int, int, str, str, Optional[datetime]]:
-        """Extract chat_id, message_id, chat_title, sender_name, message_timestamp.
+    ) -> Tuple[int, int, str, str, str, Optional[datetime]]:
+        """Extract chat_id, message_id, chat_title, sender_name, sender_username, message_timestamp.
         All synchronous — Pyrogram populates these on the message object directly.
         """
         chat_id: int = 0
         message_id: int = 0
         chat_title: str = ""
         sender_name: str = ""
+        sender_username: str = ""
         message_timestamp: Optional[datetime] = None
 
         try:
@@ -322,10 +334,12 @@ class LoadListener:
                 last = user.last_name or ""
                 username = user.username or ""
                 sender_name = f"{first} {last}".strip() or (f"@{username}" if username else "")
+                if username:
+                    sender_username = f"@{username}"
         except Exception:
             pass
 
-        return chat_id, message_id, chat_title, sender_name, message_timestamp
+        return chat_id, message_id, chat_title, sender_name, sender_username, message_timestamp
 
 
 class _AlbumState:
