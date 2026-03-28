@@ -24,18 +24,20 @@ power_only, box_truck, sprinter, conestoga, lowboy, rgn, tanker, other, or null
   rawEquipment    – the original equipment text from the message, or null
   notes           – any extra info that doesn't fit above, or null
   estimatedRate   – if rate is null (not in the message), predict the total payout \
-based on the origin-destination lane, equipment type, distance, and current US \
-trucking market rates. Use your knowledge of typical freight rates: \
-dry van ~$2.00-3.50/mi, reefer ~$2.50-4.00/mi, flatbed ~$2.50-4.50/mi, \
-power only ~$1.50-2.50/mi. Factor in lane demand (e.g. LA→NY pays more than \
-rural→rural). Return as number or null if you can't estimate.
-  estimatedRatePerMile – if ratePerMile is null, predict the per-mile rate \
-using the same market knowledge. Return as number (e.g. 2.85) or null.
+based on the origin-destination lane, equipment type, estimated distance, current US \
+trucking market rates, AND the real-time weather conditions provided below the message. \
+ALWAYS predict the AVERAGE competitive market rate, NEVER the lowest. \
+Factor in: lane demand, weather severity (snow/storms/freezing increase rates \
+due to danger and reduced carrier availability), seasonal trends, \
+and regional supply-demand. Return as number. NEVER return null — always predict.
+  estimatedRatePerMile – predict the per-mile rate using the same market knowledge \
+and weather conditions. ALWAYS return a number (e.g. 2.85). NEVER return null.
 
 RULES:
 1. If a field is not present in the message, set rate/ratePerMile to null. \
-But ALWAYS try to fill estimatedRate and estimatedRatePerMile with your best \
-market-rate prediction when the actual rate is missing.
+You MUST ALWAYS fill estimatedRate and estimatedRatePerMile with a realistic \
+market-rate prediction. Use the weather conditions provided after the message \
+to adjust your prediction — bad weather = higher rates. Never return null for these.
 2. City codes: messages often use airport codes or slang (LAX = Los Angeles CA, \
 ATL = Atlanta GA, DFW = Dallas-Fort Worth TX, SOCAL = Southern California CA, \
 DMV = DC/Maryland/Virginia, TRISTATE = NY/NJ/CT, IE = Inland Empire CA, etc.). \

@@ -57,6 +57,7 @@ class ExtractedLoad:
     estimatedPayout: Optional[float] = None  # dollars
     payoutPredicted: bool = False  # True = AI-estimated, False = from message
 
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialise to a dict with camelCase keys matching Java TelegramLoadDto."""
         return {
@@ -186,7 +187,7 @@ class GPTExtractor:
         self._cache = cache
         self._client = AsyncOpenAI(api_key=config.openai_api_key)
 
-    def _build_messages(self, text: str, chat_context: Optional[str] = None) -> list[dict]:
+    def _build_messages(self, text: str, chat_context: Optional[str] = None, weather_context: Optional[str] = None) -> list[dict]:
         """Build the OpenAI chat messages list including few-shot examples."""
         messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -203,6 +204,8 @@ class GPTExtractor:
         user_content = f"Parse this load message:\n\n{annotated}"
         if chat_context:
             user_content += f"\n\nChat context (recent messages for reference):\n{chat_context}"
+        if weather_context:
+            user_content += f"\n\n{weather_context}"
 
         messages.append({"role": "user", "content": user_content})
         return messages
@@ -211,6 +214,7 @@ class GPTExtractor:
         self,
         text: str,
         chat_context: Optional[str] = None,
+        weather_context: Optional[str] = None,
         chat_id: int = 0,
         message_id: int = 0,
         chat_title: str = "",
@@ -247,7 +251,7 @@ class GPTExtractor:
 
         metrics.inc_cache_miss()
 
-        messages = self._build_messages(text, chat_context)
+        messages = self._build_messages(text, chat_context, weather_context)
 
         last_error: Optional[Exception] = None
         for attempt in range(1, self._config.max_retries + 1):

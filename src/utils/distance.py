@@ -11,7 +11,6 @@ from loguru import logger
 # In-memory geocode cache: "City, ST" -> (lat, lng) or None
 _geo_cache: Dict[str, Optional[Tuple[float, float]]] = {}
 
-FALLBACK_RATE_PER_MILE = 2.50  # last-resort fallback if GPT didn't predict
 ROAD_FACTOR = 1.3  # straight-line to driving distance multiplier
 
 
@@ -83,25 +82,25 @@ async def estimate_load_distances(loads: List) -> None:
             load.estimatedDistance = est_distance
             load.distancePredicted = True
 
-            # Payout: use real rate if available, otherwise use GPT prediction
+            # Payout: use real rate if available, otherwise weather-aware prediction
             if load.rate and load.rate > 0:
                 load.estimatedPayout = load.rate
                 load.payoutPredicted = False
             elif hasattr(load, 'estimatedRate') and load.estimatedRate and load.estimatedRate > 0:
-                # GPT predicted a market rate for this lane — use it
+                # GPT predicted a market rate with weather context — use it
                 load.estimatedPayout = load.estimatedRate
                 load.payoutPredicted = True
             else:
-                # Last resort fallback
-                load.estimatedPayout = round(est_distance * FALLBACK_RATE_PER_MILE)
+                # Fallback only if GPT somehow didn't predict (shouldn't happen now)
+                load.estimatedPayout = round(est_distance * 2.50)
                 load.payoutPredicted = True
 
             # ratePerMile: use real rate, GPT prediction, or calculate from payout
             if load.ratePerMile and load.ratePerMile > 0:
                 pass  # already set from message
             elif hasattr(load, 'estimatedRatePerMile') and load.estimatedRatePerMile and load.estimatedRatePerMile > 0:
-                # GPT predicted a per-mile rate
+                # GPT predicted a per-mile rate with weather context
                 load.ratePerMile = load.estimatedRatePerMile
-            elif load.estimatedPayout and est_distance > 0 and not load.payoutPredicted:
-                # Calculate from real payout
+            elif load.estimatedPayout and est_distance > 0:
+                # Calculate from payout
                 load.ratePerMile = round(load.estimatedPayout / est_distance, 2)

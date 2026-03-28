@@ -18,11 +18,15 @@ from loguru import logger
 from pyrogram import Client
 from pyrogram.types import Message
 
+import aiohttp
+
 from src.backend.client import BackendClient
 from src.extractor.gpt_extractor import ExtractedLoad, GPTExtractor
 from src.filters.message_filter import MessageFilter
 from src.utils.distance import estimate_load_distances
 from src.utils.metrics import metrics
+from src.utils.rate_predictor import detect_states, get_state_coords
+from src.utils.weather import get_weather
 
 # Regex for Telegram @handles in caption text
 _HANDLE_RE = re.compile(r"@[\w]+")
@@ -44,6 +48,28 @@ def _extract_contact_from_caption(caption: str) -> Optional[str]:
     if len(stripped) < 60:
         return stripped
     return None
+
+
+async def _build_weather_context(text: str) -> Optional[str]:
+    """Detect US states in message text, fetch weather, return context string for GPT."""
+    states = detect_states(text)
+    if not states:
+        return None
+
+    lines = ["REAL-TIME WEATHER CONDITIONS (use these to adjust your rate prediction):"]
+    async with aiohttp.ClientSession() as session:
+        for st in states[:4]:  # max 4 states to keep prompt short
+            coords = get_state_coords(st)
+            if not coords:
+                continue
+            w = await get_weather(coords[0], coords[1], session)
+            lines.append(
+                f"  {st}: {w.temperature_f:.0f}°F, wind {w.wind_speed_mph:.0f}mph, "
+                f"precip {w.precipitation_inch:.2f}in, snow {w.snowfall_inch:.2f}in "
+                f"({w.condition_label})"
+            )
+
+    return "\n".join(lines) if len(lines) > 1 else None
 
 
 class LoadListener:
@@ -222,9 +248,12 @@ class LoadListener:
                 logger.warning(f"Screenshot extraction failed: {img_err}")
 
         if result is None and text:
+            # Fetch weather for detected states and include in prompt
+            weather_ctx = await _build_weather_context(text)
             result = await self._extractor.extract(
                 text=text,
                 chat_context=None,
+                weather_context=weather_ctx,
                 chat_id=chat_id,
                 message_id=message_id,
                 chat_title=chat_title,
