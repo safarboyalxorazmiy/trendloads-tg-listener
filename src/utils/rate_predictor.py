@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Tuple
 
+from src.extractor.city_codes import resolve
+
 # State abbreviation → approximate centroid (lat, lng)
 STATE_COORDS: Dict[str, Tuple[float, float]] = {
     "AL": (32.8, -86.8), "AK": (64.2, -152.5), "AZ": (34.3, -111.7),
@@ -36,8 +38,29 @@ _STATE_RE = re.compile(
 
 
 def detect_states(text: str) -> List[str]:
-    """Extract unique US state abbreviations from message text."""
-    return list(dict.fromkeys(_STATE_RE.findall(text.upper())))
+    """Extract unique US state abbreviations from message text.
+
+    Also resolves city/airport codes (LAX, ATL, DFW, etc.) to their states
+    so weather can be fetched even when state abbreviations aren't explicit.
+    """
+    upper = text.upper()
+    states: list[str] = []
+
+    # 1. Direct state abbreviation matches
+    states.extend(_STATE_RE.findall(upper))
+
+    # 2. Resolve city codes (LAX→CA, ATL→GA, DFW→TX, etc.)
+    tokens = re.split(r'[\s\-\>→~,/]+', upper)
+    for token in tokens:
+        clean = token.strip().strip('()')
+        if len(clean) < 2 or len(clean) > 10:
+            continue
+        resolved = resolve(clean)
+        if resolved:
+            states.append(resolved[1])  # state abbreviation
+
+    # Deduplicate while preserving order
+    return list(dict.fromkeys(states))
 
 
 def get_state_coords(state: str) -> Tuple[float, float] | None:
