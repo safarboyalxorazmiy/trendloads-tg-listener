@@ -91,6 +91,7 @@ async def estimate_load_distances(loads: List) -> None:
                 load.estimatedPayout = round(est_distance * RATE_PER_MILE)
                 load.payoutPredicted = True
 
-            # ratePerMile: calculate if we have both distance and payout
-            if load.estimatedPayout and est_distance > 0 and (not load.ratePerMile or load.ratePerMile == 0):
+            # ratePerMile: only calculate from REAL rates (not predicted ones)
+            # If payout was predicted from $2.50/mi, showing $2.50/mi back is meaningless
+            if not load.payoutPredicted and load.estimatedPayout and est_distance > 0 and (not load.ratePerMile or load.ratePerMile == 0):
                 load.ratePerMile = round(load.estimatedPayout / est_distance, 2)
