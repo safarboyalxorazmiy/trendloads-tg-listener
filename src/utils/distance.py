@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Tuple
 import aiohttp
 from loguru import logger
 
+from src.utils.rate_predictor import STATE_COORDS
+
 # In-memory geocode cache: "City, ST" -> (lat, lng) or None
 _geo_cache: Dict[str, Optional[Tuple[float, float]]] = {}
 
@@ -65,13 +67,19 @@ async def estimate_load_distances(loads: List) -> None:
             dest_city = load.destCity
             dest_state = load.destState
 
-            # Skip if no origin/dest
-            if not (origin_city and origin_state and dest_city and dest_state):
+            # Need at least state for both origin and dest
+            if not (origin_state and dest_state):
                 continue
 
-            # Geocode origin and destination
-            o_coord = await _geocode(origin_city, origin_state, session)
-            d_coord = await _geocode(dest_city, dest_state, session)
+            # Geocode: use city+state if available, fall back to state centroid
+            if origin_city:
+                o_coord = await _geocode(origin_city, origin_state, session)
+            else:
+                o_coord = STATE_COORDS.get(origin_state.upper())
+            if dest_city:
+                d_coord = await _geocode(dest_city, dest_state, session)
+            else:
+                d_coord = STATE_COORDS.get(dest_state.upper())
 
             if not o_coord or not d_coord:
                 continue

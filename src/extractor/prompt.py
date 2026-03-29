@@ -8,8 +8,10 @@ trucking / load-board message into structured JSON.
 
 Return a single JSON object (no markdown, no explanation) with these fields:
 
-  origin          – object {city, state, zip} or null
-  destination     – object {city, state, zip} or null
+  origin          – object {city, state, zip} or null. \
+If only a state is mentioned (e.g. "TX", "California"), set city to null and state to \
+the 2-letter abbreviation. ALWAYS extract at least the state even if city is unknown.
+  destination     – object {city, state, zip} or null. Same rules as origin.
   equipmentType   – one of: flatbed, reefer, dry_van, step_deck, hotshot, \
 power_only, box_truck, sprinter, conestoga, lowboy, rgn, tanker, other, or null
   driverType      – one of: solo, team, or null
